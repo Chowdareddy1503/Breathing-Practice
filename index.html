@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07131f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Breathing Practice</title>
+<style>
+:root{
+ --bg:#07131f;--panel:#0d2030;--panel2:#10283a;--text:#eef7fb;--muted:#9fb7c5;
+ --accent:#55d6be;--accent2:#73b7ff;--line:#315165;--danger:#ff9a8b;--ok:#79e3a6;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+ margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0%,#17384d 0,#07131f 58%);
+ color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+ padding:18px 14px calc(30px + env(safe-area-inset-bottom));
+}
+.app{width:min(940px,100%);margin:auto}
+header{text-align:center;margin:5px 0 18px}
+h1{font-size:clamp(28px,7vw,42px);margin:0 0 3px}
+.tag{color:var(--accent);font-size:14px;font-weight:650;letter-spacing:.03em}
+header p{color:var(--muted);margin:7px 0 0;font-size:14px}
+.card{
+ background:rgba(13,32,48,.96);border:1px solid #1e3b4e;border-radius:22px;padding:clamp(17px,4vw,34px);
+ box-shadow:0 20px 60px rgba(0,0,0,.28);margin-bottom:16px
+}
+.toprow{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.status{text-align:center;flex:1;padding-top:4px}
+#phase{font-size:clamp(27px,7vw,44px);font-weight:750;margin:0}
+#instruction{color:var(--muted);font-size:15px;margin-top:6px;min-height:23px}
+
+/* Animated Face Container */
+.facebox{
+ width:116px;min-width:116px;height:116px;border-radius:20px;background:#091b29;border:1px solid #25465a;
+ display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden
+}
+.face{width:82px;height:82px;position:relative;transition:transform .35s ease}
+.head{position:absolute;inset:3px;border:4px solid #dceff5;border-radius:50%}
+.eye{position:absolute;width:8px;height:10px;border-radius:50%;background:#dceff5;top:27px}
+.eye.left{left:23px}.eye.right{right:23px}
+.nose{position:absolute;left:50%;transform:translateX(-50%);top:38px;width:6px;height:7px;border-bottom:2.5px solid #dceff5;border-right:2.5px solid #dceff5;border-radius:0 0 3px 0}
+.mouth{position:absolute;left:50%;transform:translateX(-50%);top:49px;width:28px;height:12px;border-bottom:4px solid #dceff5;border-radius:0 0 50% 50%;transition:all .3s}
+
+/* Airflow visual particles */
+.airflow{position:absolute;pointer-events:none;opacity:0;transition:opacity .3s ease}
+.face.inhale .airflow-nose{opacity:1}
+.face.exhale .airflow-mouth{opacity:1}
+
+.airflow-nose{top:30px;left:50%;transform:translateX(-50%);width:24px;height:24px}
+.airflow-nose .stream{
+ position:absolute;width:2px;height:8px;background:linear-gradient(180deg,rgba(115,183,255,0),rgba(85,214,190,.85));
+ border-radius:3px;animation:streamDown .9s linear infinite;
+}
+.airflow-nose .stream:nth-child(1){left:7px;animation-delay:0s}
+.airflow-nose .stream:nth-child(2){right:7px;animation-delay:.25s}
+
+.airflow-mouth{top:58px;left:50%;transform:translateX(-50%);width:36px;height:22px}
+.airflow-mouth .puff{
+ position:absolute;left:50%;top:0;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;
+ background:radial-gradient(circle,rgba(164,228,255,.7) 0%,rgba(164,228,255,0) 70%);
+ animation:puffOut 1.2s ease-out infinite;
+}
+.airflow-mouth .puff:nth-child(2){animation-delay:.4s}
+.airflow-mouth .puff:nth-child(3){animation-delay:.8s}
+
+@keyframes streamDown{
+ 0%{transform:translateY(0) scaleY(.4);opacity:0}
+ 50%{opacity:1}
+ 100%{transform:translateY(12px) scaleY(1);opacity:0}
+}
+@keyframes puffOut{
+ 0%{transform:translate(-50%,0) scale(.5);opacity:0}
+ 40%{opacity:.85}
+ 100%{transform:translate(calc(-50% + var(--dx, 0px)),16px) scale(1.9);opacity:0}
+}
+.airflow-mouth .puff:nth-child(1){--dx:-4px}
+.airflow-mouth .puff:nth-child(2){--dx:0px}
+.airflow-mouth .puff:nth-child(3){--dx:4px}
+
+.face.inhale{transform:scale(1.08)}
+.face.inhale .mouth{width:20px;height:8px;border:4px solid #dceff5;border-top:0;border-radius:0 0 50% 50%}
+.face.exhale{transform:scale(.92)}
+.face.exhale .mouth{width:13px;height:20px;border:4px solid #dceff5;border-radius:50%}
+.face.rest{transform:scale(1)}
+.face.rest .mouth{height:4px;border:0;background:#dceff5;border-radius:4px}
+
+.visual{position:relative;height:145px;margin:12px 0 20px;display:flex;align-items:center}
+.track{position:absolute;left:4%;right:4%;height:5px;background:var(--line);border-radius:99px}
+.track:before{content:"";position:absolute;left:0;right:0;top:-8px;height:21px;border-top:1px solid #27475a;border-bottom:1px solid #27475a;border-radius:99px}
+.dot{position:absolute;left:4%;width:24px;height:24px;border-radius:50%;background:white;box-shadow:0 0 0 8px rgba(255,255,255,.08),0 0 25px rgba(255,255,255,.45);transform:translateX(-50%)}
+.labels{position:absolute;left:4%;right:4%;bottom:2px;display:flex;justify-content:space-between;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.timer{text-align:center;font-variant-numeric:tabular-nums;font-size:27px;font-weight:700}
+.progress{height:7px;background:#173447;border-radius:99px;overflow:hidden;margin:14px 0 22px}
+#bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .15s}
+.controls{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+button{border:0;border-radius:12px;padding:12px 19px;font-size:15px;font-weight:700;cursor:pointer;color:#06151d;background:var(--accent);touch-action:manipulation}
+button.secondary{background:#19384a;color:var(--text);border:1px solid #2c5064}
+button.danger{background:#4b2928;color:#ffd8d3;border:1px solid #70403d}
+button:disabled{opacity:.45;cursor:not-allowed}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.setting{background:var(--panel2);padding:13px 14px;border-radius:14px}
+.setting label{display:block;color:var(--muted);font-size:13px;margin-bottom:5px}
+select,input[type=time],input[type=text],input[type=number]{width:100%;background:#091b29;color:var(--text);border:1px solid #315165;border-radius:9px;padding:9px;font-size:14px}
+.section-title{font-size:20px;margin:0 0 4px}
+.section-sub{color:var(--muted);font-size:13px;margin:0 0 15px}
+.reminders{display:grid;gap:10px}
+.reminder{
+ display:grid;grid-template-columns:48px 1fr auto;gap:11px;align-items:center;background:var(--panel2);
+ border:1px solid #1f4052;border-radius:14px;padding:11px
+}
+.reminder input[type=checkbox]{width:21px;height:21px;accent-color:var(--accent)}
+.reminder .info{min-width:0}
+.reminder .name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reminder .meta{color:var(--muted);font-size:12px;margin-top:2px}
+.reminder button{padding:7px 10px;font-size:12px}
+.addrow{display:grid;grid-template-columns:1fr 120px auto;gap:8px;margin-top:12px}
+.tiny{font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px}
+.switchrow{display:flex;justify-content:space-between;align-items:center;gap:15px;background:#0a1b29;border-radius:13px;padding:12px 14px;margin-top:12px}
+.switchrow label{font-size:14px}.switch{width:44px;height:24px;appearance:none;background:#315165;border-radius:99px;position:relative;cursor:pointer}
+.switch:before{content:"";position:absolute;width:18px;height:18px;top:3px;left:3px;border-radius:50%;background:white;transition:.2s}
+.switch:checked{background:var(--accent)}.switch:checked:before{left:23px}
+.note{margin-top:17px;padding:15px;border-radius:14px;background:#0a1b29;border:1px solid #1f4052;color:#b9ccd6;font-size:13px;line-height:1.55}
+.note strong{color:var(--text)}
+.warning{border-color:#60433f;color:#d9c0bc}
+details{margin-top:15px;color:var(--muted)}
+summary{cursor:pointer;color:var(--text);font-weight:650}
+ul{line-height:1.65}
+.footer{text-align:center;color:#718d9c;font-size:12px;margin-top:14px}
+@media(max-width:600px){
+ body{padding-left:10px;padding-right:10px}
+ .toprow{align-items:center}.facebox{width:88px;min-width:88px;height:88px}.face{transform:scale(.82)}.face.inhale{transform:scale(.89)}.face.exhale{transform:scale(.75)}
+ .settings{grid-template-columns:1fr}
+ .addrow{grid-template-columns:1fr 110px}.addrow button{grid-column:1/-1}
+ .reminder{grid-template-columns:40px 1fr auto}
+}
+</style>
+</head>
+<body>
+<main class="app">
+<header>
+ <h1>Breathing Practice</h1>
+ <div class="tag">Built by Chowdareddy</div>
+ <p>A gentle visual breathing guide for regular practice</p>
+</header>
+
+<section class="card">
+ <div class="toprow">
+  <div class="status">
+   <div id="phase">Ready</div>
+   <div id="instruction">Sit comfortably, relax your shoulders, and breathe without forcing.</div>
+  </div>
+  <div class="facebox" aria-label="Animated breathing face">
+   <div id="face" class="face rest">
+    <div class="head"></div>
+    <span class="eye left"></span>
+    <span class="eye right"></span>
+    <span class="nose"></span>
+    <span class="mouth"></span>
+    <div class="airflow airflow-nose">
+      <span class="stream"></span>
+      <span class="stream"></span>
+    </div>
+    <div class="airflow airflow-mouth">
+      <span class="puff"></span>
+      <span class="puff"></span>
+      <span class="puff"></span>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <div class="visual">
+  <div class="track"></div><div id="dot" class="dot"></div>
+  <div class="labels"><span>Inhale</span><span>Exhale</span></div>
+ </div>
+ <div class="timer" id="clock">10:00</div>
+ <div class="progress"><div id="bar"></div></div>
+ <div class="controls">
+  <button id="start">Start</button><button id="pause" class="secondary" disabled>Pause</button><button id="reset" class="secondary">Reset</button>
+ </div>
+ <div class="settings">
+  <div class="setting"><label for="duration">Practice duration</label><select id="duration"><option value="300">5 minutes</option><option value="600" selected>10 minutes</option><option value="900">15 minutes</option></select></div>
+  <div class="setting"><label for="pace">Gentle breathing pace</label><select id="pace"><option value="2,4" selected>Inhale 2s · Exhale 4s</option><option value="3,6">Inhale 3s · Exhale 6s</option></select></div>
+ </div>
+ <div class="note"><strong>How to breathe:</strong> Let your belly gently rise as you breathe in through your nose. Then breathe out slowly and gently through lightly pursed lips. Do not force a deep breath and do not hold your breath.</div>
+ <div class="note warning"><strong>Important:</strong> This is a breathing-practice aid, not an asthma treatment or replacement for prescribed medicines or your asthma action plan. Stop if you feel dizzy, uncomfortable, increasingly breathless, wheezy, or tight-chested, and follow your usual asthma action plan. If symptoms are severe or do not settle, seek urgent medical care.</div>
+</section>
+
+<section class="card" id="reminderCard">
+ <h2 class="section-title">Medicine & Practice Reminders</h2>
+ <p class="section-sub">Medicine and breathing reminders automatically re-occur every day and check marks reset daily at 4:00 AM IST.</p>
+
+ <div id="reminders" class="reminders"></div>
+
+ <div class="addrow">
+  <input id="reminderName" type="text" maxlength="40" placeholder="e.g. Morning medicine">
+  <input id="reminderTime" type="time" value="08:00">
+  <button id="addReminder">Add reminder</button>
+ </div>
+
+ <div class="switchrow">
+  <label for="notify">Allow browser notifications</label>
+  <input id="notify" class="switch" type="checkbox">
+ </div>
+ <div class="switchrow">
+  <label for="breathReminder">Remind me to do breathing practice</label>
+  <input id="breathReminder" class="switch" type="checkbox">
+ </div>
+
+ <div class="settings" id="breathConfigRow" style="margin-top:12px">
+  <div class="setting">
+   <label for="breathFrequency">Practice Frequency</label>
+   <select id="breathFrequency">
+    <option value="once">Once daily (Fixed time)</option>
+    <option value="1">Every 1 hour</option>
+    <option value="2" selected>Every 2 hours</option>
+    <option value="3">Every 3 hours</option>
+    <option value="4">Every 4 hours</option>
+   </select>
+  </div>
+  <div class="setting" id="singleTimeGroup">
+   <label for="breathTime">Fixed daily time</label>
+   <input id="breathTime" type="time" value="20:00">
+  </div>
+ </div>
+ 
+ <div id="notifyStatus" class="tiny"></div>
+ <div class="tiny">Browser notifications trigger while this tab or browser is kept active. Daily completion checks reset automatically at 4:00 AM IST.</div>
+</section>
+
+<section class="card">
+ <h2 class="section-title">Daily medicine check</h2>
+ <p class="section-sub">Your checklist resets automatically each day at 4:00 AM IST.</p>
+ <div id="dailySummary" class="note">No medicine reminders set yet.</div>
+</section>
+
+<details class="card">
+ <summary>Why this breathing pattern?</summary>
+ <ul>
+  <li>It uses slow, comfortable breathing rather than forceful deep breaths.</li>
+  <li>The exhalation is longer than the inhalation and is relaxed.</li>
+  <li>There is no deliberate breath-holding or hyperventilation challenge.</li>
+  <li>Practice when you are breathing comfortably so the technique becomes familiar.</li>
+ </ul>
+</details>
+<div class="footer">Keep prescribed asthma medicines and your asthma action plan available. This page does not replace medical care.</div>
+</main>
+
+<script>
+(() => {
+ const $=id=>document.getElementById(id);
+ const dot=$('dot'),face=$('face'),phase=$('phase'),instruction=$('instruction'),clock=$('clock'),bar=$('bar');
+ const startBtn=$('start'),pauseBtn=$('pause'),resetBtn=$('reset'),durationSel=$('duration'),paceSel=$('pace');
+ const remindersEl=$('reminders'),nameEl=$('reminderName'),timeEl=$('reminderTime'),addBtn=$('addReminder');
+ const notifyEl=$('notify'),breathReminderEl=$('breathReminder'),breathFrequencyEl=$('breathFrequency'),breathTimeEl=$('breathTime');
+ const singleTimeGroup=$('singleTimeGroup'),notifyStatus=$('notifyStatus'),summary=$('dailySummary');
+
+ let total=Number(durationSel.value),remaining=total,running=false,raf=null,last=0,phaseStart=0,phaseName='inhale';
+ let inhale=2,exhale=4;
+
+ function fmt(sec){sec=Math.max(0,Math.ceil(sec));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')}
+ function setDot(p){dot.style.left=(4+92*Math.max(0,Math.min(1,p)))+'%'}
+ function setPhase(n){
+  phaseName=n;
+  if(n==='inhale'){
+   phase.textContent='Inhale gently';instruction.textContent='Breathe in through your nose. Let your belly rise.';
+   face.className='face inhale';
+  } else {
+   phase.textContent='Exhale slowly';instruction.textContent='Gently purse your lips and breathe out without forcing.';
+   face.className='face exhale';
+  }
+ }
+ function reset(){
+  running=false;cancelAnimationFrame(raf);raf=null;total=Number(durationSel.value);remaining=total;
+  [inhale,exhale]=paceSel.value.split(',').map(Number);setPhase('inhale');phaseStart=0;setDot(0);clock.textContent=fmt(remaining);
+  bar.style.width='0%';startBtn.disabled=false;pauseBtn.disabled=true;startBtn.textContent='Start';
+ }
+ function tick(ts){
+  if(!running)return;if(!last)last=ts;const dt=(ts-last)/1000;last=ts;remaining-=dt;
+  bar.style.width=Math.min(100,(total-remaining)/total*100)+'%';clock.textContent=fmt(remaining);
+  if(remaining<=0){running=false;clock.textContent='00:00';bar.style.width='100%';pauseBtn.disabled=true;startBtn.disabled=false;
+   phase.textContent='Complete';instruction.textContent='Well done. Return to normal, comfortable breathing.';face.className='face rest';setDot(0);return}
+  if(phaseStart===0)phaseStart=ts;const pe=(ts-phaseStart)/1000,d=phaseName==='inhale'?inhale:exhale;
+  if(pe>=d){phaseStart=ts;setPhase(phaseName==='inhale'?'exhale':'inhale')}
+  const p=Math.min(1,pe/d);setDot(phaseName==='inhale'?p:1-p);raf=requestAnimationFrame(tick);
+ }
+ startBtn.onclick=()=>{if(running)return;[inhale,exhale]=paceSel.value.split(',').map(Number);running=true;last=0;phaseStart=0;startBtn.disabled=true;pauseBtn.disabled=false;requestAnimationFrame(tick)}
+ pauseBtn.onclick=()=>{running=false;cancelAnimationFrame(raf);raf=null;last=0;pauseBtn.disabled=true;startBtn.disabled=false;startBtn.textContent='Resume'}
+ resetBtn.onclick=()=>{startBtn.textContent='Start';reset()};durationSel.onchange=reset;paceSel.onchange=reset;
+
+ const KEY='breathingPracticeReminders_v3', SETTINGS='breathingPracticeSettings_v3', DAY='breathingPracticeDay_v3';
+
+ /* 4:00 AM IST Auto-Reset Logic:
+    IST is UTC + 5:30. A day cycle shifts at 04:00:00 IST.
+    Subtracting 4 hours from IST yields the logical reset date. */
+ function getISTDateKey(){
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istNow = new Date(now.getTime() + istOffset + (now.getTimezoneOffset() * 60 * 1000));
+  // Shift by 4 hours back so 04:00 AM starts the new cycle
+  const resetShift = new Date(istNow.getTime() - (4 * 60 * 60 * 1000));
+  return resetShift.getFullYear() + '-' + String(resetShift.getMonth() + 1).padStart(2, '0') + '-' + String(resetShift.getDate()).padStart(2, '0');
+ }
+
+ function loadReminders(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return[]}}
+ function saveReminders(a){localStorage.setItem(KEY,JSON.stringify(a))}
+ function settings(){try{return JSON.parse(localStorage.getItem(SETTINGS)||'{}')}catch{return{}}}
+ function saveSettings(s){localStorage.setItem(SETTINGS,JSON.stringify(s))}
+
+ function checks(){
+  const cycleKey=getISTDateKey(), old=localStorage.getItem(DAY);
+  if(old!==cycleKey){
+   localStorage.setItem(DAY,cycleKey);
+   localStorage.setItem('breathingPracticeChecks_v3','{}');
+  }
+  try{return JSON.parse(localStorage.getItem('breathingPracticeChecks_v3')||'{}')}catch{return{}}
+ }
+ function saveChecks(c){localStorage.setItem('breathingPracticeChecks_v3',JSON.stringify(c))}
+
+ function renderReminders(){
+  const a=loadReminders(),c=checks();remindersEl.innerHTML='';
+  if(!a.length){remindersEl.innerHTML='<div class="note">No medicine reminders set yet. Add up to 5 below.</div>'}
+  a.forEach(r=>{
+   const row=document.createElement('div');row.className='reminder';
+   const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!c[r.id];cb.setAttribute('aria-label','Mark '+r.name+' complete');
+   cb.onchange=()=>{const cc=checks();cc[r.id]=cb.checked;saveChecks(cc);renderSummary()};
+   const info=document.createElement('div');info.className='info';info.innerHTML='<div class="name"></div><div class="meta"></div>';
+   info.querySelector('.name').textContent=r.name;info.querySelector('.meta').textContent='Daily at '+r.time;
+   const del=document.createElement('button');del.className='danger';del.textContent='Delete';
+   del.onclick=()=>{saveReminders(loadReminders().filter(x=>x.id!==r.id));renderReminders();renderSummary()};
+   row.append(cb,info,del);remindersEl.appendChild(row);
+  });
+  renderSummary();
+ }
+ function renderSummary(){
+  const a=loadReminders(),c=checks();if(!a.length){summary.textContent='No medicine reminders set yet.';return}
+  const done=a.filter(r=>c[r.id]).length;
+  summary.innerHTML='<strong>'+done+' of '+a.length+' reminders completed today.</strong> '+(done===a.length?'All checked! Resets daily at 4:00 AM IST.':'Remember to follow your daily plan.');
+ }
+ addBtn.onclick=()=>{
+  const a=loadReminders();if(a.length>=5){alert('You can set up to 5 reminders.');return}
+  const name=nameEl.value.trim()||'Medicine check';
+  const time=timeEl.value||'08:00';
+  a.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2),name,time});
+  saveReminders(a);nameEl.value='';renderReminders();
+ };
+
+ async function requestNotifications(){
+  if(!('Notification'in window)){notifyStatus.textContent='Notifications are not supported by this browser.';notifyEl.checked=false;return false}
+  if(Notification.permission==='granted'){notifyStatus.textContent='Browser notifications are active.';return true}
+  if(Notification.permission==='denied'){notifyStatus.textContent='Notifications are blocked. Please allow them in site settings.';notifyEl.checked=false;return false}
+  const p=await Notification.requestPermission();const ok=p==='granted';notifyEl.checked=ok;
+  notifyStatus.textContent=ok?'Browser notifications are active.':'Notification permission was not granted.';return ok;
+ }
+
+ function updateBreathUI(){
+  const freq=breathFrequencyEl.value;
+  singleTimeGroup.style.display=(freq==='once')?'block':'none';
+ }
+
+ notifyEl.onchange=async()=>{
+  const ok=notifyEl.checked?await requestNotifications():true;
+  const s=settings();s.notify=ok&&notifyEl.checked;saveSettings(s);
+ };
+ breathReminderEl.onchange=()=>{
+  const s=settings();s.breath=breathReminderEl.checked;
+  s.breathFreq=breathFrequencyEl.value;s.breathTime=breathTimeEl.value;saveSettings(s);
+ };
+ breathFrequencyEl.onchange=()=>{
+  updateBreathUI();const s=settings();s.breathFreq=breathFrequencyEl.value;saveSettings(s);
+ };
+ breathTimeEl.onchange=()=>{const s=settings();s.breathTime=breathTimeEl.value;saveSettings(s)};
+
+ function applySettings(){
+  const s=settings();
+  notifyEl.checked=s.notify===true && 'Notification'in window && Notification.permission==='granted';
+  breathReminderEl.checked=s.breath===true;
+  breathFrequencyEl.value=s.breathFreq||'2';
+  breathTimeEl.value=s.breathTime||'20:00';
+  updateBreathUI();
+  if(notifyEl.checked)notifyStatus.textContent='Browser notifications are active.';
+ }
+
+ function sendNotification(title,body){
+  if('Notification'in window && Notification.permission==='granted'){try{new Notification(title,{body})}catch(e){}}
+ }
+
+ function checkDue(){
+  const now=new Date(),hh=String(now.getHours()).padStart(2,'0'),mm=String(now.getMinutes()).padStart(2,'0');
+  const cycle=getISTDateKey();
+  const a=loadReminders(),s=settings();
+  const sent=JSON.parse(localStorage.getItem('breathingPracticeSent_v3')||'{}');
+
+  if(sent.cycle!==cycle){sent.cycle=cycle;sent.items={};}
+
+  // Daily recurring medicine alerts
+  a.forEach(r=>{
+   if(r.time===hh+':'+mm && !sent.items[r.id]){
+    sendNotification('Medicine Reminder','Time for your prescribed medicine: '+r.name);
+    sent.items[r.id]=1;
+   }
+  });
+
+  // Daily recurring breathing reminders (Multi-occurrence or Single daily)
+  if(s.breath){
+   const freq=s.breathFreq||'2';
+   if(freq==='once'){
+    if((s.breathTime||'20:00')===hh+':'+mm && !sent.items.breath_once){
+     sendNotification('Breathing Practice','Take a few minutes for your gentle breathing practice.');
+     sent.items.breath_once=1;
+    }
+   } else {
+    // Multi-occurrence: between 08:00 and 22:00 at top of hour
+    const interval=Number(freq);
+    const hourNum=now.getHours();
+    if(mm==='00' && hourNum>=8 && hourNum<=22 && (hourNum % interval === 0)){
+     const stampKey='breath_'+hh;
+     if(!sent.items[stampKey]){
+      sendNotification('Breathing Practice Reminder','Time for your '+interval+'-hour breathing session. Relax and practice gently.');
+      sent.items[stampKey]=1;
+     }
+    }
+   }
+  }
+
+  localStorage.setItem('breathingPracticeSent_v3',JSON.stringify(sent));
+  renderSummary(); // Keep status updated across cycle resets
+ }
+
+ setInterval(checkDue,20000);
+ checkDue();
+ reset();
+ renderReminders();
+ applySettings();
+})();
+</script>
+</body>
+</html>
