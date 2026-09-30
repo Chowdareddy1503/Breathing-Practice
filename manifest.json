@@ -1,0 +1,8 @@
+{
+  "name": "Breathing Practice",
+  "short_name": "Breathing",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#07131f",
+  "theme_color": "#07131f"
+}
